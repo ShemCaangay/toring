@@ -130,6 +130,7 @@
     return { r, put, dust, fill: () => { dust(C - k); return a; } };
   }
   const frac = f => Math.floor(C * f);
+  const shuffled = (a, seed) => { const r = rngOf(seed); for (let i = C - 1; i > 0; i--) { const j = (r() * (i + 1)) | 0; for (let q = 0; q < 4; q++) { const t = a[i * 4 + q]; a[i * 4 + q] = a[j * 4 + q]; a[j * 4 + q] = t; } } return a; };
   const K = Math.floor(C * .5);                                  // particles 0..K-1 are the screenshot slot: in the Limits slide (5) they gather into a stipple of the app image
   const SHAPES = [
     function dandelion() {                                    // 0 · hero: a seed head, the TORING "watching" mark
@@ -246,68 +247,89 @@ void main(){ vec2 d = gl_PointCoord - 0.5; float r = dot(d, d) * 4.0; if (r > 1.
       ['uMix', 'uTime', 'uAspect', 'uPx', 'uCamA', 'uCamB', 'uOffA', 'uOffB', 'uRot', 'uPan', 'uImgA', 'uImgB', 'uFx'].forEach(n => { U[n] = gl.getUniformLocation(prog, n); });
       U.palA = gl.getUniformLocation(prog, 'uPalA[0]'); U.palB = gl.getUniformLocation(prog, 'uPalB[0]');
       ['aA', 'aB', 'aR'].forEach(n => { A[n] = gl.getAttribLocation(prog, n); gl.enableVertexAttribArray(A[n]); });
-      SHAPES.forEach(f => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, f(), gl.DYNAMIC_DRAW); buffers.push(b); });
+      SHAPES.forEach((f, si) => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, si >= 1 && si <= 5 ? shuffled(f(), 900 + si) : f(), gl.DYNAMIC_DRAW); buffers.push(b); });
       const rr = rngOf(5), ra = new Float32Array(C * 3); for (let i = 0; i < C; i++) { ra[i * 3] = rr(); ra[i * 3 + 1] = .6 + rr() * 1.0; ra[i * 3 + 2] = i < K ? 1 : 0; }
       rBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, rBuf); gl.bufferData(gl.ARRAY_BUFFER, ra, gl.STATIC_DRAW);
       gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.disable(gl.DEPTH_TEST);
     } catch (err) { console.warn('[toring] WebGL setup failed, using the CSS background:', err.message); root.classList.add('no-gl'); prog = null; }
   }
 
-  /* ------------------------------------------------------------------ Limits slide (5): the screenshot is part of the particle sequence.
-     Half of the particles gather into a stipple of the real screenshot, locked to the screen where the old Limits card used to float; the crisp
-     image resolves out of it while they are assembled and dissolves back into particles as they leave. No other slide uses this. */
-  const SHOT = 5, shotEl = $('.shot[data-i="5"]'), CROP_Y = .74;        // same slot, size and crop as the old Limits card
-  let stipple = null, stipImg = null, lay = null;
-  const shotAsp = () => (W < 760 ? 46 / 56 : 20 / 22);
-  function layoutShot() {
-    const Wc = canvas.clientWidth, Hc = canvas.clientHeight, mobile = Wc < 760, ar = shotAsp();
-    const w = mobile ? Wc * .46 : Wc * .20, h = w / ar, cx = Wc * .5 + (mobile ? -.2 : -.27) * Wc, cy = Hc * .5 + (mobile ? -.14 : -.04) * Hc;
-    lay = { x: cx - w / 2, y: cy - h / 2, w, h }; dbg.lay = lay;
-    if (shotEl) { shotEl.style.left = lay.x.toFixed(1) + 'px'; shotEl.style.top = lay.y.toFixed(1) + 'px'; shotEl.style.width = lay.w.toFixed(1) + 'px'; shotEl.style.height = lay.h.toFixed(1) + 'px'; }
-    uploadStipple();
+  /* ------------------------------------------------------------------ screenshots as part of the particle sequence (slides 1-5, each its own slot)
+     Half of the particles gather into a stipple of that slide's real screenshot, locked to the screen at an exact rectangle; the crisp image
+     resolves out of it while the particles are assembled and dissolves back into particles as they leave. Every slot is chosen so the slide's
+     original text and its original shape stay where they were: 1 Today centred, 2 Activity right of the headline, 3 System centred,
+     4 Notifications right of the bell, 5 Limits where its floating card used to be (the other four cards still float around it). */
+  const SHOTS = { 1: ['img/compact.webp', 760 / 1400], 2: ['img/activity.webp', 760 / 1400], 3: ['img/system-top.webp', 872 / 740], 4: ['img/notifications.webp', 760 / 1400], 5: ['img/limits.webp', 872 / 1622] };
+  const shotEls = {}; $$('.shot').forEach(el => { shotEls[+el.dataset.i] = el; });
+  const LAY = {}, stipple = {}, imgs = {};
+  function slotFor(i, Wc, Hc) {
+    const portrait = Wc < 760 || Wc / Hc < .85, nat = SHOTS[i][1]; let ar = nat, cropY = .5, w, h, cx = Wc * .5, cy = Hc * (portrait ? .5 : .47);
+    if (i === 5) { const mobile = Wc < 760; ar = mobile ? 46 / 56 : 20 / 22; cropY = .74; w = Wc * (mobile ? .46 : .20); h = w / ar; cx = Wc * .5 + (mobile ? -.2 : -.27) * Wc; cy = Hc * .5 + (mobile ? -.14 : -.04) * Hc; }
+    else if (portrait) {
+      if (i === 3) { w = Wc * .84; h = w / ar; }
+      else if (i === 2) { ar = 1.3; cropY = 0; w = Math.min(Wc * .72, Hc * .3 * ar); h = w / ar; cy = Hc * .27; }     // the headline sits mid-screen, so the Activity shot (top of the list) goes above it
+      else { w = Math.min(Wc * .62, Hc * .46 * ar); h = w / ar; }
+    } else {
+      if (i === 3) { h = Math.min(Hc * .42, Wc * .38 / ar); w = h * ar; }
+      else { h = Math.min(Hc * .62, Wc * .3 / ar); w = h * ar; if (i !== 1) cx = Math.min(Wc * .85, Wc - w / 2 - 20); }
+    }
+    return { rect: { x: cx - w / 2, y: cy - h / 2, w, h }, ar, cropY };
   }
   /* K points over the visible crop of the screenshot: more where there is ink (text, bars), a few on the glass so the card edge reads */
-  function sampleImage(img) {
-    const ar = shotAsp(), sw = img.naturalWidth, sh = Math.min(img.naturalHeight, sw / ar), sy = (img.naturalHeight - sh) * CROP_Y;
+  function sampleImage(img, seed, ar, cropY) {
+    const nw = img.naturalWidth, nh = img.naturalHeight, nar = nw / nh; let sx = 0, sy = 0, sw = nw, sh = nh;
+    if (ar > nar) { sh = nw / ar; sy = (nh - sh) * cropY; } else if (ar < nar) { sw = nh * ar; sx = (nw - sw) * .5; }
     const wpx = 200, hpx = Math.max(8, Math.round(wpx / ar)), cv = document.createElement('canvas'); cv.width = wpx; cv.height = hpx;
-    const g = cv.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, sy, sw, sh, 0, 0, wpx, hpx); const px = g.getImageData(0, 0, wpx, hpx).data;
+    const g = cv.getContext('2d', { willReadFrequently: true }); g.drawImage(img, sx, sy, sw, sh, 0, 0, wpx, hpx); const px = g.getImageData(0, 0, wpx, hpx).data;
     const cdf = new Float32Array(wpx * hpx), ink = new Float32Array(wpx * hpx); let sum = 0;
     for (let p = 0; p < wpx * hpx; p++) { const a = px[p * 4 + 3] / 255, lum = (.299 * px[p * 4] + .587 * px[p * 4 + 1] + .114 * px[p * 4 + 2]) / 255, k = a < .5 ? 0 : 1 - lum; ink[p] = k; sum += a < .5 ? 0 : Math.pow(k, 1.5) + .012; cdf[p] = sum; }
-    const r = rngOf(105), u = new Float32Array(K), v = new Float32Array(K), w = new Float32Array(K);
+    const r = rngOf(seed), u = new Float32Array(K), v = new Float32Array(K), w = new Float32Array(K);
     for (let j = 0; j < K; j++) {
       const t = r() * sum; let lo = 0, hi = cdf.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (cdf[m] < t) lo = m + 1; else hi = m; }
       u[j] = ((lo % wpx) + r()) / wpx; v[j] = (Math.floor(lo / wpx) + r()) / hpx; w[j] = .5 + .75 * ink[lo];
     }
-    return { u, v, w, ar };
+    return { u, v, w, ar, cropY };
   }
-  function uploadStipple() {
-    if (!stipple || !lay || !prog) return;
-    if (Math.abs(stipple.ar - shotAsp()) > 1e-6) stipple = sampleImage(stipImg);   // the crop changes between phone and desktop
-    const asp = asp0(), cam = CAM[SHOT] * camMul(asp), Wc = canvas.clientWidth, Hc = canvas.clientHeight, out = new Float32Array(K * 4);
-    for (let j = 0; j < K; j++) { out[j * 4] = (((lay.x + stipple.u[j] * lay.w) / Wc) * 2 - 1) * asp * cam / 2; out[j * 4 + 1] = (1 - ((lay.y + stipple.v[j] * lay.h) / Hc) * 2) * cam / 2; out[j * 4 + 2] = 0; out[j * 4 + 3] = stipple.w[j]; }
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers[SHOT]); gl.bufferSubData(gl.ARRAY_BUFFER, 0, out);       // screen-locked: exactly where the crisp screenshot sits
+  function uploadStipple(i) {
+    const L = LAY[i]; if (!imgs[i] || !L || !prog) return;
+    if (!stipple[i] || Math.abs(stipple[i].ar - L.ar) > 1e-6) stipple[i] = sampleImage(imgs[i], 100 + i, L.ar, L.cropY);       // the crop differs between phone and desktop
+    const s = stipple[i], asp = asp0(), cam = CAM[i] * camMul(asp), Wc = canvas.clientWidth, Hc = canvas.clientHeight, out = new Float32Array(K * 4), r = L.rect;
+    for (let j = 0; j < K; j++) { out[j * 4] = (((r.x + s.u[j] * r.w) / Wc) * 2 - 1) * asp * cam / 2; out[j * 4 + 1] = (1 - ((r.y + s.v[j] * r.h) / Hc) * 2) * cam / 2; out[j * 4 + 2] = 0; out[j * 4 + 3] = s.w[j]; }
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers[i]); gl.bufferSubData(gl.ARRAY_BUFFER, 0, out);       // screen-locked: exactly where the crisp screenshot sits
   }
-  function loadStipple() {
-    const im = new Image(); im.decoding = 'async';
-    im.onload = () => { try { stipImg = im; stipple = sampleImage(im); uploadStipple(); wake(); } catch (e) { console.warn('[toring] could not sample the Limits screenshot', e.message); } };
-    im.src = 'img/limits.webp';
+  function layoutAll() {
+    const Wc = canvas.clientWidth, Hc = canvas.clientHeight;
+    for (let i = 1; i <= 5; i++) {
+      const L = LAY[i] = slotFor(i, Wc, Hc), el = shotEls[i], r = L.rect;
+      if (el) { el.style.left = r.x.toFixed(1) + 'px'; el.style.top = r.y.toFixed(1) + 'px'; el.style.width = r.w.toFixed(1) + 'px'; el.style.height = r.h.toFixed(1) + 'px'; el.firstElementChild.style.objectPosition = '50% ' + (L.cropY * 100) + '%'; }
+      uploadStipple(i);
+    }
   }
-  let shotR = -1;
-  function updateShot() {
-    if (!shotEl) return;
-    const d = Math.abs(s - SHOT), r = reduce ? (d < .5 ? 1 : 0) : 1 - smooth(.15, .33, d);
-    if (Math.abs(shotR - r) < .003 && (r === 0 || r === 1)) return;
-    shotR = r; dbg.shot = +r.toFixed(3);
-    if (r < .004) { shotEl.style.visibility = 'hidden'; shotEl.style.opacity = 0; return; }
-    shotEl.style.visibility = 'visible'; shotEl.style.opacity = r.toFixed(3);
-    shotEl.style.filter = !reduce && r < .995 ? 'blur(' + ((1 - r) * 9).toFixed(1) + 'px)' : 'none';
-    shotEl.style.transform = !reduce && r < .995 ? 'scale(' + (.965 + .035 * r).toFixed(4) + ')' : 'none';
+  function loadStipples() {
+    for (let i = 1; i <= 5; i++) {
+      const im = new Image(); im.decoding = 'async';
+      im.onload = () => { try { imgs[i] = im; uploadStipple(i); wake(); } catch (e) { console.warn('[toring] could not sample screenshot', i, e.message); } };
+      im.src = SHOTS[i][0];
+    }
+  }
+  const shotR = {};
+  function updateShots() {
+    for (let i = 1; i <= 5; i++) {
+      const el = shotEls[i]; if (!el) continue;
+      const d = Math.abs(s - i), r = reduce ? (d < .5 ? 1 : 0) : 1 - smooth(.15, .33, d);
+      if (shotR[i] !== undefined && Math.abs(shotR[i] - r) < .003 && (r === 0 || r === 1)) continue;
+      shotR[i] = r; dbg.shot[i] = +r.toFixed(3);
+      if (r < .004) { el.style.visibility = 'hidden'; el.style.opacity = 0; continue; }
+      el.style.visibility = 'visible'; el.style.opacity = r.toFixed(3);
+      el.style.filter = !reduce && r < .995 ? 'blur(' + ((1 - r) * 9).toFixed(1) + 'px)' : 'none';
+      el.style.transform = !reduce && r < .995 ? 'scale(' + (.965 + .035 * r).toFixed(4) + ')' : 'none';
+    }
   }
   function resize() {
     measure(); dpr = dprCap;
     canvas.width = Math.round(canvas.clientWidth * dpr); canvas.height = Math.round(canvas.clientHeight * dpr);
     if (prog) gl.viewport(0, 0, canvas.width, canvas.height);
-    layoutShot();
+    layoutAll();
   }
 
   /* ------------------------------------------------------------------ per-frame state */
@@ -318,7 +340,7 @@ void main(){ vec2 d = gl_PointCoord - 0.5; float r = dot(d, d) * 4.0; if (r > 1.
   // rest position (fraction of the stage from its centre), tilt and entrance direction of each floating card
   const CARD = [[-.27, -.04, -7, -1.0, .5], [.06, -.21, 5, .6, -1.1], [.3, .11, -5, 1.1, .5], [-.1, .2, 4, -.2, 1.2], [-.4, .23, 8, -1.1, 1.0]];
   const CARD_M = [[-.2, -.14, -6, -1, .3], [.2, .03, 5, 1, .4], [-.04, .22, -3, 0, 1.2]];
-  const dbg = window.__toring = { s: 0, active: -1, frames: 0, avgMs: 0, gl: !!prog, dpr: 1, K, shot: 0, lay: null, stippled: () => (stipple ? 1 : 0) };
+  const dbg = window.__toring = { s: 0, active: -1, frames: 0, avgMs: 0, gl: !!prog, dpr: 1, K, shot: {}, lay: LAY, stippled: () => Object.keys(stipple).length };
   let raf = 0, last = 0, time = 0, s = 0, slow = 0, nSlow = 0, frames = 0;
   const wake = () => { if (!raf && !document.hidden) raf = requestAnimationFrame(frame); };
   function layoutCards(e, t) {
@@ -349,7 +371,7 @@ void main(){ vec2 d = gl_PointCoord - 0.5; float r = dot(d, d) * 4.0; if (r > 1.
     numcols.style.opacity = clamp(1 - Math.abs(s - 3) / .55).toFixed(3);
     // the app's cursor highlight and drifting blobs
     if (!reduce) { stage.style.setProperty('--px', (pm.x * 14).toFixed(1)); stage.style.setProperty('--py', (pm.y * 14).toFixed(1)); stage.style.setProperty('--sx', pm.cx.toFixed(0) + 'px'); stage.style.setProperty('--sy', pm.cy.toFixed(0) + 'px'); }
-    const ce = clamp((s - 4.4) / .6); layoutCards(ce, time); updateShot();
+    const ce = clamp((s - 4.4) / .6); layoutCards(ce, time); updateShots();
     // the live dot sits at the centre of the final ring and leans a little towards the pointer
     const po = smooth(5.7, 6, s); pupil.style.opacity = po.toFixed(3);
     if (po > 0.01) {
@@ -368,7 +390,7 @@ void main(){ vec2 d = gl_PointCoord - 0.5; float r = dot(d, d) * 4.0; if (r > 1.
   const camMul = asp => (asp > 1.2 ? 1 : Math.min(1.9, 1.2 / asp * .85 + .15));
   const palA = new Float32Array(9), palB = new Float32Array(9);
   function draw(asp) {
-    const i0 = clamp(Math.floor(s), 0, N - 2), f = s - i0, t = reduce ? (f > .5 ? 1 : 0) : clamp((f - .16) / .68), fit = camMul(asp), of = offFactor(asp);
+    const i0 = clamp(Math.floor(s), 0, N - 2), f = s - i0, t = reduce ? (f > .5 ? 1 : 0) : clamp((f - .28) / .44), fit = camMul(asp), of = offFactor(asp);
     palA.set(PAL[i0]); palB.set(PAL[i0 + 1]);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.bindBuffer(gl.ARRAY_BUFFER, buffers[i0]); gl.vertexAttribPointer(A.aA, 4, gl.FLOAT, false, 0, 0);
@@ -377,7 +399,7 @@ void main(){ vec2 d = gl_PointCoord - 0.5; float r = dot(d, d) * 4.0; if (r > 1.
     gl.uniform1f(U.uMix, t); gl.uniform1f(U.uTime, time); gl.uniform1f(U.uAspect, asp);
     gl.uniform1f(U.uPx, dpr * canvas.clientHeight / 900 * 2.5 * Math.min(1.25, 1.2 / fit + .1) * Math.sqrt(16000 / C) * (asp < .8 ? 1.55 : 1));
     gl.uniform1f(U.uCamA, CAM[i0] * fit); gl.uniform1f(U.uCamB, CAM[i0 + 1] * fit);
-    gl.uniform1f(U.uImgA, i0 === SHOT ? 1 : 0); gl.uniform1f(U.uImgB, i0 + 1 === SHOT ? 1 : 0); gl.uniform1f(U.uFx, i0 === SHOT - 1 || i0 === SHOT ? 1 : 0);
+    gl.uniform1f(U.uImgA, LAY[i0] ? 1 : 0); gl.uniform1f(U.uImgB, LAY[i0 + 1] ? 1 : 0); gl.uniform1f(U.uFx, 1);
     gl.uniform2f(U.uOffA, OFF[i0][0] * of, OFF[i0][1] * of); gl.uniform2f(U.uOffB, OFF[i0 + 1][0] * of, OFF[i0 + 1][1] * of);
     gl.uniform2f(U.uRot, reduce ? 0 : -pm.y * .07 + Math.sin(time * .2) * .03, (reduce ? s * .35 : time * .05 + s * .35 + pm.x * .12));
     gl.uniform2f(U.uPan, reduce ? 0 : pm.x * .04, reduce ? 0 : -pm.y * .03);
@@ -393,7 +415,7 @@ void main(){ vec2 d = gl_PointCoord - 0.5; float r = dot(d, d) * 4.0; if (r > 1.
   addEventListener('hashchange', hashScene);
   resize(); readScroll(); s = tgt; hashScene(); readScroll(); s = tgt;
   setActive(0);
-  loadStipple();
-  document.fonts && document.fonts.ready.then(() => { measure(); layoutShot(); wake(); });
+  loadStipples();
+  document.fonts && document.fonts.ready.then(() => { measure(); layoutAll(); wake(); });
   wake();
 })();
