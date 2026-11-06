@@ -110,7 +110,6 @@ b { font-weight: 700; }
 .cap.bl { left: var(--pad); bottom: calc(var(--pad) + 8px); max-width: min(48ch, 52vw); }
 .cap.br2 { right: var(--pad); bottom: calc(var(--pad) + 8px); text-align: right; max-width: min(34ch, 40vw); }
 .s2 .cap.bl { max-width: min(58ch, 60vw); }
-@media (min-width: 761px) { .s4 .cap.tl { max-width: min(24ch, 22vw); } }
 
 /* reveal: letters/words arrive blurred and slightly low, left to right, line by line (the reference: ~25 ms per letter, ~250 ms per line) */
 .rv .ch, .rv .wd { display: inline-block; opacity: 0; filter: blur(9px); transform: translateY(.32em); transition: opacity .22s ease, filter .22s ease, transform .22s ease; }
@@ -158,10 +157,16 @@ b { font-weight: 700; }
 .nc li:nth-child(3n) { color: var(--ink); font-weight: 400; } .nc li:nth-child(4n) { color: #8a8a8a; }
 @keyframes colscroll { to { transform: translateY(-50%); } }
 
-/* the app screenshots: they resolve out of their particle stipple at an exact rectangle (set by the script) and dissolve back into it */
+/* floating glass cards with real screenshots (limits scene) */
+.cards { position: absolute; inset: 0; pointer-events: none; perspective: 1400px; }
+.card { position: absolute; left: 50%; top: 50%; margin: 0; width: var(--w, 22vw); opacity: 0; will-change: transform, opacity; transform-style: preserve-3d; border-radius: 22px; border: 1px solid rgba(0,0,0,.12); background: #efefef; box-shadow: var(--soft-shadow), 0 24px 50px rgba(0,0,0,.10); overflow: hidden; }
+.card img { display: block; width: 100%; height: var(--h, 15vw); object-fit: cover; object-position: var(--op, top); }
+.card figcaption { position: absolute; left: 12px; top: 10px; padding: 3px 11px; border-radius: 12px; font-size: 10px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--ink); border: 1px solid var(--line); }
+.c0 { --w: 20vw; --h: 22vw; --op: 50% 74%; } .c1 { --w: 19vw; --h: 21vw; --op: 50% 30%; } .c2 { --w: 21vw; --h: 14vw; --op: 50% 64%; } .c3 { --w: 22vw; --h: 14vw; --op: 50% 88%; } .c4 { --w: 17vw; --h: 18vw; --op: 50% 28%; }
+/* Limits slide only: the screenshot resolves out of its particle stipple at an exact rectangle (set by the script) and dissolves back into it */
 .shots { position: absolute; inset: 0; pointer-events: none; }
 .shot { position: absolute; margin: 0; opacity: 0; visibility: hidden; border-radius: 22px; border: 1px solid rgba(0,0,0,.12); background: #efefef; box-shadow: var(--soft-shadow), 0 24px 50px rgba(0,0,0,.10); overflow: hidden; will-change: opacity, transform, filter; transform-origin: 50% 50%; }
-.shot img { display: block; width: 100%; height: 100%; }
+.shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 74%; }
 .shot figcaption { position: absolute; left: 12px; top: 10px; padding: 3px 11px; border-radius: 12px; font-size: 10px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--ink); border: 1px solid var(--line); }
 .pupil { position: absolute; left: 0; top: 0; width: 15px; height: 15px; margin: -7.5px 0 0 -7.5px; opacity: 0; pointer-events: none; will-change: transform, opacity; display: grid; place-items: center; }
 .pupil .live-dot { width: 13px; height: 13px; }
@@ -205,6 +210,7 @@ b { font-weight: 700; }
   .foot { bottom: 14px; gap: 10px; } .foot-cols { gap: 22px; flex-wrap: wrap; } .foot-cols a { font-size: 12px; padding: 2px 0; }
   .foot-base { font-size: 9px; }
   .nc { width: 28%; } .nc.l { left: 2%; } .nc.r { right: 2%; }
+  .c0 { --w: 46vw; --h: 56vw; } .c1 { --w: 44vw; --h: 52vw; } .c2 { --w: 48vw; --h: 34vw; } .c3, .c4 { display: none; }
   .story { height: calc(var(--n) * 120vh); height: calc(var(--n) * 120svh); }
 }
 @media (max-height: 560px) and (orientation: landscape) { .cap { font-size: 11px; } .big { font-size: clamp(26px, 5vw, 60px); } .cue, .fine { display: none; } .right-top { gap: 8px; } .foot-cols a { padding: 1px 0; } }

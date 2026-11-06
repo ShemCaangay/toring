@@ -84,8 +84,8 @@
 
     <!-- 2 · privacy -->
     <section class="scene s2" data-i="2" id="privacy" aria-labelledby="h2">
-      <p class="cap tl rv" data-rv="words">Logs are read from disk into a local database. The only outgoing requests are the plan-limit check, using the Claude and Codex sign-ins already on your PC, the update check, and a small connectivity check to those same hosts. No account. No upload.</p>
-      <h2 id="h2" class="big br rv" data-rv="letters"><span class="ln">Your usage stays</span><span class="ln">on this PC.</span></h2>
+      <h2 id="h2" class="big mid rv" data-rv="letters"><span class="ln">Your usage stays</span><span class="ln">on this PC.</span></h2>
+      <p class="cap bl rv" data-rv="words">Logs are read from disk into a local database. The only outgoing requests are the plan-limit check, using the Claude and Codex sign-ins already on your PC, and the update check, and a small connectivity check to those same hosts. No account. No upload.</p>
     </section>
 
     <!-- 3 · stats -->
@@ -130,11 +130,13 @@
     <!-- decorative layers driven by the scroll -->
     <div class="numcols" id="numcols" aria-hidden="true"><div class="nc l"></div><div class="nc r"></div></div>
     <div class="shots" id="shots">
-      <figure class="shot" data-i="1"><img src="img/compact.webp" alt="TORING compact widget with the clock, CPU candles, today's tokens and cost, and the Claude 5 hour window" decoding="async" width="760" height="1400"><figcaption class="glass">Today</figcaption></figure>
-      <figure class="shot" data-i="2"><img src="img/activity.webp" alt="TORING Activity and Logs tab with the saved history of alerts and updates" decoding="async" width="760" height="1400"><figcaption class="glass">Activity &amp; Logs</figcaption></figure>
-      <figure class="shot" data-i="3"><img src="img/system-top.webp" alt="TORING System view with a live CPU chart" decoding="async" width="872" height="740"><figcaption class="glass">System</figcaption></figure>
-      <figure class="shot" data-i="4"><img src="img/notifications.webp" alt="TORING notification centre listing recent alerts and update notices" decoding="async" width="760" height="1400"><figcaption class="glass">Notifications</figcaption></figure>
       <figure class="shot" data-i="5"><img src="img/limits.webp" alt="TORING Limits view: Claude and Codex session and weekly limits as percent used with reset countdowns" decoding="async" width="872" height="1622"><figcaption class="glass">Limits</figcaption></figure>
+    </div>
+    <div class="cards" id="cards">
+      <figure class="card c1"><img src="img/notifications.webp" alt="TORING notification centre listing recent alerts and update notices" loading="lazy" decoding="async" width="760" height="1400"><figcaption class="glass">Notifications</figcaption></figure>
+      <figure class="card c2"><img src="img/compact.webp" alt="TORING compact widget with clock, CPU candles, today's tokens and cost, and the Claude 5 hour window" loading="lazy" decoding="async" width="760" height="1400"><figcaption class="glass">Today</figcaption></figure>
+      <figure class="card c3"><img src="img/system-top.webp" alt="TORING System view with a live CPU chart" loading="lazy" decoding="async" width="872" height="740"><figcaption class="glass">System</figcaption></figure>
+      <figure class="card c4"><img src="img/activity.webp" alt="TORING Activity and Logs tab with saved history" loading="lazy" decoding="async" width="760" height="1400"><figcaption class="glass">Activity &amp; Logs</figcaption></figure>
     </div>
     <div class="pupil" id="pupil" aria-hidden="true"><i class="live-dot"></i></div>
   </div>
@@ -143,7 +145,7 @@
   <div class="sr" id="sr-copy">
     <h2>What TORING does</h2>
     <p>TORING is a light glass desktop widget for Windows 10 and 11. It shows live CPU, memory, GPU, disk and network stats, your Claude Code and Codex token usage with estimated cost for today, the week and the month, your Claude and Codex plan limits as percent used with reset countdowns, and a notification centre with alerts and update notices whose history is kept across restarts.</p>
-    <p>Usage logs are read locally into a local database. The only outgoing requests are the plan-limit check, which uses the Claude and Codex sign-ins already on your PC, the update check, and a small connectivity check to those same hosts. There is no account and no upload.</p>
+    <p>Usage logs are read locally into a local database. The only outgoing requests are the plan-limit check, which uses the Claude and Codex sign-ins already on your PC, and the update check, and a small connectivity check to those same hosts. There is no account and no upload.</p>
     <p>The installer is free to download from the GitHub release. It is not code-signed yet, so Windows SmartScreen may ask you to confirm.</p>
   </div>
 </main>
