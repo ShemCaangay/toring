@@ -32,6 +32,7 @@
       <a href="#stats" data-scene="3">Stats</a>
       <a href="#alerts" data-scene="4">Alerts</a>
       <a href="#limits" data-scene="5">Limits</a>
+      <a href="#showcase" data-scene="6">Showcase</a>
     </span>
   </nav>
   <div class="nav-right">
@@ -49,11 +50,12 @@
     <a href="#stats" data-scene="3">Stats</a>
     <a href="#alerts" data-scene="4">Alerts</a>
     <a href="#limits" data-scene="5">Limits</a>
+    <a href="#showcase" data-scene="6">Showcase</a>
     <a class="menu-dl" data-dl href="https://github.com/ShemCaangay/toring-updates/releases/latest" rel="noopener">Download for Windows <span class="badge" data-ver>latest</span></a>
   </nav>
 </div>
 
-<main class="story" id="story" style="--n:7">
+<main class="story" id="story" style="--n:8">
   <h1 class="sr">TORING: see your PC, see your tokens</h1>
   <div class="stage" id="stage">
     <div class="blobs" aria-hidden="true"><i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i></div>
@@ -107,9 +109,15 @@
       <h2 id="h5" class="big br rv" data-rv="letters"><span class="ln">Know what's left,</span><span class="ln">before it's gone.</span></h2>
     </section>
 
-    <!-- 6 · download -->
-    <section class="scene s6" data-i="6" id="download" aria-labelledby="h6">
-      <h2 id="h6" class="big tl3 rv" data-rv="letters"><span class="ln">Keep it</span><span class="ln">in sight,</span><span class="ln">always.</span></h2>
+    <!-- 6 · showcase: the one place the app screenshots appear -->
+    <section class="scene s6" data-i="6" id="showcase" aria-labelledby="h6">
+      <p class="cap tl rv" data-rv="words">The compact widget, saved activity, live system stats, notifications and plan limits: the five views of TORING, together.</p>
+      <h2 id="h6" class="big br rv" data-rv="letters"><span class="ln">Five views.</span><span class="ln">One widget.</span></h2>
+    </section>
+
+    <!-- 7 · download -->
+    <section class="scene s7" data-i="7" id="download" aria-labelledby="h7">
+      <h2 id="h7" class="big tl3 rv" data-rv="letters"><span class="ln">Keep it</span><span class="ln">in sight,</span><span class="ln">always.</span></h2>
       <div class="right-top">
         <p class="cap rv" data-rv="words">Always on top, tucked in the tray, updating itself. One installer, nothing to set up.</p>
         <a class="cta wide" data-dl id="dl-final" href="https://github.com/ShemCaangay/toring-updates/releases/latest" rel="noopener">
@@ -130,13 +138,11 @@
     <!-- decorative layers driven by the scroll -->
     <div class="numcols" id="numcols" aria-hidden="true"><div class="nc l"></div><div class="nc r"></div></div>
     <div class="shots" id="shots">
-      <figure class="shot" data-i="5"><img src="img/limits.webp" alt="TORING Limits view: Claude and Codex session and weekly limits as percent used with reset countdowns" decoding="async" width="872" height="1622"><figcaption class="glass">Limits</figcaption></figure>
-    </div>
-    <div class="cards" id="cards">
-      <figure class="card c1"><img src="img/notifications.webp" alt="TORING notification centre listing recent alerts and update notices" loading="lazy" decoding="async" width="760" height="1400"><figcaption class="glass">Notifications</figcaption></figure>
-      <figure class="card c2"><img src="img/compact.webp" alt="TORING compact widget with clock, CPU candles, today's tokens and cost, and the Claude 5 hour window" loading="lazy" decoding="async" width="760" height="1400"><figcaption class="glass">Today</figcaption></figure>
-      <figure class="card c3"><img src="img/system-top.webp" alt="TORING System view with a live CPU chart" loading="lazy" decoding="async" width="872" height="740"><figcaption class="glass">System</figcaption></figure>
-      <figure class="card c4"><img src="img/activity.webp" alt="TORING Activity and Logs tab with saved history" loading="lazy" decoding="async" width="760" height="1400"><figcaption class="glass">Activity &amp; Logs</figcaption></figure>
+      <figure class="shot"><img src="img/compact.webp" alt="TORING compact widget with the clock, CPU candles, today's tokens and cost, and the Claude 5 hour window" decoding="async" width="760" height="1400"><figcaption class="glass">Today</figcaption></figure>
+      <figure class="shot"><img src="img/activity.webp" alt="TORING Activity and Logs tab with the saved history of alerts and updates" decoding="async" width="760" height="1400"><figcaption class="glass">Activity &amp; Logs</figcaption></figure>
+      <figure class="shot"><img src="img/system-top.webp" alt="TORING System view with a live CPU chart" decoding="async" width="872" height="740"><figcaption class="glass">System</figcaption></figure>
+      <figure class="shot"><img src="img/notifications.webp" alt="TORING notification centre listing recent alerts and update notices" decoding="async" width="760" height="1400"><figcaption class="glass">Notifications</figcaption></figure>
+      <figure class="shot"><img src="img/limits.webp" alt="TORING Limits view: Claude and Codex session and weekly limits as percent used with reset countdowns" decoding="async" width="872" height="1622"><figcaption class="glass">Limits</figcaption></figure>
     </div>
     <div class="pupil" id="pupil" aria-hidden="true"><i class="live-dot"></i></div>
   </div>
@@ -151,6 +157,7 @@
 </main>
 
 <div class="toast glass" id="toast" role="status" aria-live="polite" hidden></div>
+<script src="layout.js" defer></script>
 <script src="main.js" defer></script>
 </body>
 </html>

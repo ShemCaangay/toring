@@ -1,7 +1,7 @@
 /* TORING website: scroll-driven story in the app's own theme. Raw WebGL point sprites (graphite ink on light glass), DOM text reveals, real GitHub release for the download. */
 'use strict';
 (() => {
-  const N = 7;
+  const N = 8;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
   const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a)); return t * t * (3 - 2 * t); };
@@ -130,6 +130,7 @@
     return { r, put, dust, fill: () => { dust(C - k); return a; } };
   }
   const frac = f => Math.floor(C * f);
+  const shuffled = (a, seed) => { const r = rngOf(seed); for (let i = C - 1; i > 0; i--) { const j = (r() * (i + 1)) | 0; for (let q = 0; q < 4; q++) { const t = a[i * 4 + q]; a[i * 4 + q] = a[j * 4 + q]; a[j * 4 + q] = t; } } return a; };
   const K = Math.floor(C * .5);                                  // particles 0..K-1 are the screenshot slot: in the Limits slide (5) they gather into a stipple of the app image
   const SHAPES = [
     function dandelion() {                                    // 0 · hero: a seed head, the TORING "watching" mark
@@ -191,6 +192,12 @@
       for (let i = 0; i < frac(.04); i++) put(gauss(r) * .05, gauss(r) * .05, gauss(r) * .05, 1.2);
       return b.fill();
     },
+    function halo() {                                          // 6 · showcase: a halo of tick marks around the row of app views, like the limit rings
+      const b = builder(71), { r, put } = b;
+      for (let i = 0; i < frac(.5); i++) { const R = i % 2 ? 1 : .86, tk = (r() * 96) | 0, a = tk / 96 * 6.2832 + (r() - .5) * .02, rr = R + (r() - .5) * .05; put(Math.cos(a) * 2.45 * rr, Math.sin(a) * 1.05 * rr, gauss(r) * .02, .5 + .5 * r()); }
+      for (let i = 0; i < frac(.04); i++) put(gauss(r) * .05, gauss(r) * .05, gauss(r) * .05, 1.2);
+      return b.fill();
+    },
     function ring() {                                          // 6 · the live ring: radial fibres around a pupil (the status dot, enlarged)
       const b = builder(79), { r, put } = b, R = 1.2;
       for (let i = 0; i < frac(.72); i++) { const th = (((r() * 640) | 0) + r() * .22) / 640 * 6.2832, rr = R * (.33 + .67 * Math.pow(r(), .8)), wob = .018 * Math.sin(rr * 22 + th * 5); put(Math.cos(th + wob) * rr, Math.sin(th + wob) * rr, (rr / R - .5) * .12, .4 + .55 * Math.pow(rr / R, 1.6)); }
@@ -202,8 +209,8 @@
   // graphite: [colour 1, colour 2, (unused glow)] — the particles are ink on the light glass, like the app's bars and candles
   const GRAY = [.04, .04, .04, .4, .4, .4, 0, 0, 0];
   const PAL = SHAPES.map(() => GRAY);
-  const OFF = [[.52, .02], [0, 0], [0, 0], [0, -.02], [0, .06], [0, 0], [-.55, .02]];
-  const CAM = [3.2, 3.3, 3.5, 3.3, 3.3, 3.7, 3.1];
+  const OFF = [[.52, .02], [0, 0], [0, 0], [0, -.02], [0, .06], [0, 0], [0, 0], [-.55, .02]];
+  const CAM = [3.2, 3.3, 3.5, 3.3, 3.3, 3.7, 3.4, 3.1];
 
   /* ------------------------------------------------------------------ WebGL */
   const canvas = $('#gl');
@@ -212,28 +219,26 @@
   if (!gl) root.classList.add('no-gl');
   else {
     const VS = `attribute vec4 aA; attribute vec4 aB; attribute vec3 aR;
-uniform float uMix, uTime, uAspect, uPx, uCamA, uCamB, uImgA, uImgB, uFx; uniform vec2 uOffA, uOffB, uRot, uPan; uniform vec3 uPalA[3]; uniform vec3 uPalB[3];
+uniform float uMix, uTime, uAspect, uPx, uCamA, uCamB, uImgA, uImgB; uniform vec2 uOffA, uOffB, uRot, uPan; uniform vec3 uPalA[3]; uniform vec3 uPalB[3];
 varying vec3 vCol; varying float vA;
 void main(){
-  // uFx = 0: the original change. uFx = 1 (only into and out of the Limits slide): particles leave one after another and the camera pushes through them
-  float tm = mix(uMix, clamp((uMix - aR.x * 0.34) / 0.66, 0.0, 1.0), uFx);
-  float e = tm * tm * (3.0 - 2.0 * tm);
+  float e = uMix * uMix * (3.0 - 2.0 * uMix);
   float keepA = 1.0 - aR.z * uImgA, keepB = 1.0 - aR.z * uImgB, keep = mix(keepA, keepB, e);
   vec3 p = mix(aA.xyz, aB.xyz, e); float w = mix(aA.w, aB.w, e);
   float s = aR.x * 6.2831853, sw = sin(3.14159 * e);
-  p += sw * mix(0.55, 0.42, uFx) * vec3(sin(s * 3.0 + uTime * .6), cos(s * 2.0 + uTime * .5), sin(s * 5.0 - uTime * .4)) * (0.3 + aR.x);
+  p += sw * 0.55 * vec3(sin(s * 3.0 + uTime * .6), cos(s * 2.0 + uTime * .5), sin(s * 5.0 - uTime * .4)) * (0.3 + aR.x);
   p += keep * 0.004 * vec3(sin(uTime * .7 + s * 7.0), cos(uTime * .6 + s * 5.0), sin(uTime * .5 + s * 3.0));
   float cy = cos(uRot.y * keep), sy = sin(uRot.y * keep); p = vec3(cy * p.x + sy * p.z, p.y, -sy * p.x + cy * p.z);
   float cx = cos(uRot.x * keep), sx = sin(uRot.x * keep); p = vec3(p.x, cx * p.y - sx * p.z, sx * p.y + cx * p.z);
   p.xy += mix(uOffA * keepA, uOffB * keepB, e) + uPan * keep;
-  float z = p.z + mix(uCamA, uCamB, e) * (1.0 - 0.36 * sw * uFx);
+  float z = p.z + mix(uCamA, uCamB, e);
   if (z < 0.3) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); gl_PointSize = 0.0; vCol = vec3(0.0); vA = 0.0; return; }
   gl_Position = vec4(p.x * 2.0 / uAspect, p.y * 2.0, 0.0, z);
   float imgBoost = 1.0 + 0.7 * mix(aR.z * uImgA, aR.z * uImgB, e);
-  gl_PointSize = max(1.0, uPx * aR.y * (2.2 / z) * (0.6 + w * 0.45) * imgBoost * (1.0 + 1.25 * sw * uFx));
+  gl_PointSize = max(1.0, uPx * aR.y * (2.2 / z) * (0.6 + w * 0.45) * imgBoost);
   vec3 c1 = mix(uPalA[0], uPalB[0], e), c2 = mix(uPalA[1], uPalB[1], e);
   vCol = mix(c1, c2, aR.x);
-  vA = clamp(w, 0.0, 1.3) * clamp(2.5 / z, 0.35, 1.15) * (0.9 + 0.1 * sin(uTime * 2.0 + s * 11.0)) * (1.0 - 0.68 * sw * uFx);
+  vA = clamp(w, 0.0, 1.3) * clamp(2.5 / z, 0.35, 1.15) * (0.9 + 0.1 * sin(uTime * 2.0 + s * 11.0));
 }`;
     // ink on light: premultiplied "over" blending, so dense areas get darker and everything else stays the glass underneath
     const FS = `precision mediump float; varying vec3 vCol; varying float vA;
@@ -243,100 +248,94 @@ void main(){ vec2 d = gl_PointCoord - 0.5; float r = dot(d, d) * 4.0; if (r > 1.
       prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog);
       if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
       gl.useProgram(prog);
-      ['uMix', 'uTime', 'uAspect', 'uPx', 'uCamA', 'uCamB', 'uOffA', 'uOffB', 'uRot', 'uPan', 'uImgA', 'uImgB', 'uFx'].forEach(n => { U[n] = gl.getUniformLocation(prog, n); });
+      ['uMix', 'uTime', 'uAspect', 'uPx', 'uCamA', 'uCamB', 'uOffA', 'uOffB', 'uRot', 'uPan', 'uImgA', 'uImgB'].forEach(n => { U[n] = gl.getUniformLocation(prog, n); });
       U.palA = gl.getUniformLocation(prog, 'uPalA[0]'); U.palB = gl.getUniformLocation(prog, 'uPalB[0]');
       ['aA', 'aB', 'aR'].forEach(n => { A[n] = gl.getAttribLocation(prog, n); gl.enableVertexAttribArray(A[n]); });
-      SHAPES.forEach(f => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, f(), gl.DYNAMIC_DRAW); buffers.push(b); });
+      SHAPES.forEach((f, si) => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, si === 6 ? shuffled(f(), 906) : f(), gl.DYNAMIC_DRAW); buffers.push(b); });
       const rr = rngOf(5), ra = new Float32Array(C * 3); for (let i = 0; i < C; i++) { ra[i * 3] = rr(); ra[i * 3 + 1] = .6 + rr() * 1.0; ra[i * 3 + 2] = i < K ? 1 : 0; }
       rBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, rBuf); gl.bufferData(gl.ARRAY_BUFFER, ra, gl.STATIC_DRAW);
       gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.disable(gl.DEPTH_TEST);
     } catch (err) { console.warn('[toring] WebGL setup failed, using the CSS background:', err.message); root.classList.add('no-gl'); prog = null; }
   }
 
-  /* ------------------------------------------------------------------ Limits slide (5): the screenshot is part of the particle sequence.
-     Half of the particles gather into a stipple of the real screenshot, locked to the screen where the old Limits card used to float; the crisp
-     image resolves out of it while they are assembled and dissolves back into particles as they leave. No other slide uses this. */
-  const SHOT = 5, shotEl = $('.shot[data-i="5"]'), CROP_Y = .74;        // same slot, size and crop as the old Limits card
-  let stipple = null, stipImg = null, lay = null;
-  const shotAsp = () => (W < 760 ? 46 / 56 : 20 / 22);
-  function layoutShot() {
-    const Wc = canvas.clientWidth, Hc = canvas.clientHeight, mobile = Wc < 760, ar = shotAsp();
-    const w = mobile ? Wc * .46 : Wc * .20, h = w / ar, cx = Wc * .5 + (mobile ? -.2 : -.27) * Wc, cy = Hc * .5 + (mobile ? -.14 : -.04) * Hc;
-    lay = { x: cx - w / 2, y: cy - h / 2, w, h }; dbg.lay = lay;
-    if (shotEl) { shotEl.style.left = lay.x.toFixed(1) + 'px'; shotEl.style.top = lay.y.toFixed(1) + 'px'; shotEl.style.width = lay.w.toFixed(1) + 'px'; shotEl.style.height = lay.h.toFixed(1) + 'px'; }
-    uploadStipple();
-  }
-  /* K points over the visible crop of the screenshot: more where there is ink (text, bars), a few on the glass so the card edge reads */
-  function sampleImage(img) {
-    const ar = shotAsp(), sw = img.naturalWidth, sh = Math.min(img.naturalHeight, sw / ar), sy = (img.naturalHeight - sh) * CROP_Y;
-    const wpx = 200, hpx = Math.max(8, Math.round(wpx / ar)), cv = document.createElement('canvas'); cv.width = wpx; cv.height = hpx;
-    const g = cv.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, sy, sw, sh, 0, 0, wpx, hpx); const px = g.getImageData(0, 0, wpx, hpx).data;
+  /* ------------------------------------------------------------------ the app showcase (scene 6): the only place the app screenshots appear.
+     Half of the particles gather into five stipples, one per view, locked to the screen at the cards' exact rectangles; each crisp screenshot
+     resolves out of its stipple while the particles are assembled and dissolves back as they leave, with the site's own transition. */
+  const SC = 6, L = window.TORING_LAYOUT, shotEls = $$('.shot'), SRC = ['img/compact.webp', 'img/activity.webp', 'img/system-top.webp', 'img/notifications.webp', 'img/limits.webp'];
+  let LAY = { mode: '', cards: [] }, stipple = null, stipKey = '', loaded = 0; const imgs = [];
+  /* n points over the visible crop of a screenshot: more where there is ink (text, bars), a few on the glass so the card edge reads */
+  function sampleImage(img, seed, ar, cropY, n) {
+    const nw = img.naturalWidth, nh = img.naturalHeight, nar = nw / nh; let sx = 0, sy = 0, sw = nw, sh = nh;
+    if (ar > nar) { sh = nw / ar; sy = (nh - sh) * cropY; } else if (ar < nar) { sw = nh * ar; sx = (nw - sw) * .5; }
+    const wpx = 160, hpx = Math.max(8, Math.round(wpx / ar)), cv = document.createElement('canvas'); cv.width = wpx; cv.height = hpx;
+    const g = cv.getContext('2d', { willReadFrequently: true }); g.drawImage(img, sx, sy, sw, sh, 0, 0, wpx, hpx); const px = g.getImageData(0, 0, wpx, hpx).data;
     const cdf = new Float32Array(wpx * hpx), ink = new Float32Array(wpx * hpx); let sum = 0;
     for (let p = 0; p < wpx * hpx; p++) { const a = px[p * 4 + 3] / 255, lum = (.299 * px[p * 4] + .587 * px[p * 4 + 1] + .114 * px[p * 4 + 2]) / 255, k = a < .5 ? 0 : 1 - lum; ink[p] = k; sum += a < .5 ? 0 : Math.pow(k, 1.5) + .012; cdf[p] = sum; }
-    const r = rngOf(105), u = new Float32Array(K), v = new Float32Array(K), w = new Float32Array(K);
-    for (let j = 0; j < K; j++) {
+    const r = rngOf(seed), u = new Float32Array(n), v = new Float32Array(n), w = new Float32Array(n);
+    for (let j = 0; j < n; j++) {
       const t = r() * sum; let lo = 0, hi = cdf.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (cdf[m] < t) lo = m + 1; else hi = m; }
       u[j] = ((lo % wpx) + r()) / wpx; v[j] = (Math.floor(lo / wpx) + r()) / hpx; w[j] = .5 + .75 * ink[lo];
     }
-    return { u, v, w, ar };
+    return { u, v, w, n };
   }
   function uploadStipple() {
-    if (!stipple || !lay || !prog) return;
-    if (Math.abs(stipple.ar - shotAsp()) > 1e-6) stipple = sampleImage(stipImg);   // the crop changes between phone and desktop
-    const asp = asp0(), cam = CAM[SHOT] * camMul(asp), Wc = canvas.clientWidth, Hc = canvas.clientHeight, out = new Float32Array(K * 4);
-    for (let j = 0; j < K; j++) { out[j * 4] = (((lay.x + stipple.u[j] * lay.w) / Wc) * 2 - 1) * asp * cam / 2; out[j * 4 + 1] = (1 - ((lay.y + stipple.v[j] * lay.h) / Hc) * 2) * cam / 2; out[j * 4 + 2] = 0; out[j * 4 + 3] = stipple.w[j]; }
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers[SHOT]); gl.bufferSubData(gl.ARRAY_BUFFER, 0, out);       // screen-locked: exactly where the crisp screenshot sits
+    if (!prog || loaded < SRC.length || !LAY.cards.length) return;
+    const key = LAY.mode + LAY.cards.map(c => c.ar.toFixed(3) + ':' + c.cropY).join();      // re-sample only when the arrangement (row / grid) changes
+    if (key !== stipKey) {
+      const tot = LAY.cards.reduce((a, c) => a + c.weight, 0); let left = K;
+      stipple = LAY.cards.map((c, k) => { const n = k === LAY.cards.length - 1 ? left : Math.floor(K * c.weight / tot); left -= n; return sampleImage(imgs[k], 300 + k, c.ar, c.cropY, n); });
+      stipKey = key;
+    }
+    const asp = asp0(), cam = CAM[SC] * camMul(asp), Wc = canvas.clientWidth, Hc = canvas.clientHeight, out = new Float32Array(K * 4); let o = 0;
+    stipple.forEach((s, k) => {
+      const r = LAY.cards[k];
+      for (let j = 0; j < s.n; j++, o++) { out[o * 4] = (((r.x + s.u[j] * r.w) / Wc) * 2 - 1) * asp * cam / 2; out[o * 4 + 1] = (1 - ((r.y + s.v[j] * r.h) / Hc) * 2) * cam / 2; out[o * 4 + 2] = 0; out[o * 4 + 3] = s.w[j]; }
+    });
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers[SC]); gl.bufferSubData(gl.ARRAY_BUFFER, 0, out);       // screen-locked: exactly where the crisp screenshots sit
   }
-  function loadStipple() {
-    const im = new Image(); im.decoding = 'async';
-    im.onload = () => { try { stipImg = im; stipple = sampleImage(im); uploadStipple(); wake(); } catch (e) { console.warn('[toring] could not sample the Limits screenshot', e.message); } };
-    im.src = 'img/limits.webp';
+  function layoutAll() {
+    LAY = L.slots(canvas.clientWidth, canvas.clientHeight); dbg.lay = LAY.cards;
+    LAY.cards.forEach((r, k) => {
+      const el = shotEls[k]; if (!el) return;
+      el.style.left = r.x.toFixed(1) + 'px'; el.style.top = r.y.toFixed(1) + 'px'; el.style.width = r.w.toFixed(1) + 'px'; el.style.height = r.h.toFixed(1) + 'px';
+      el.firstElementChild.style.objectPosition = '50% ' + (r.cropY * 100) + '%';
+    });
+    uploadStipple();
   }
-  let shotR = -1;
-  function updateShot() {
-    if (!shotEl) return;
-    const d = Math.abs(s - SHOT), r = reduce ? (d < .5 ? 1 : 0) : 1 - smooth(.15, .33, d);
-    if (Math.abs(shotR - r) < .003 && (r === 0 || r === 1)) return;
-    shotR = r; dbg.shot = +r.toFixed(3);
-    if (r < .004) { shotEl.style.visibility = 'hidden'; shotEl.style.opacity = 0; return; }
-    shotEl.style.visibility = 'visible'; shotEl.style.opacity = r.toFixed(3);
-    shotEl.style.filter = !reduce && r < .995 ? 'blur(' + ((1 - r) * 9).toFixed(1) + 'px)' : 'none';
-    shotEl.style.transform = !reduce && r < .995 ? 'scale(' + (.965 + .035 * r).toFixed(4) + ')' : 'none';
+  function loadStipples() {
+    SRC.forEach((src, k) => {
+      const im = new Image(); im.decoding = 'async';
+      im.onload = () => { try { imgs[k] = im; loaded++; uploadStipple(); wake(); } catch (e) { console.warn('[toring] could not sample screenshot', k, e.message); } };
+      im.src = src;
+    });
+  }
+  const shotR = [];
+  function updateShots() {
+    shotEls.forEach((el, k) => {
+      const r = reduce ? (Math.abs(s - SC) < .5 ? 1 : 0) : L.crisp(k, s, SC);
+      if (shotR[k] !== undefined && Math.abs(shotR[k] - r) < .003 && (r === 0 || r === 1)) return;
+      shotR[k] = r; dbg.shot[k] = +r.toFixed(3);
+      if (r < .004) { el.style.visibility = 'hidden'; el.style.opacity = 0; return; }
+      el.style.visibility = 'visible'; el.style.opacity = r.toFixed(3);
+      el.style.filter = !reduce && r < .995 ? 'blur(' + ((1 - r) * 9).toFixed(1) + 'px)' : 'none';
+      el.style.transform = !reduce && r < .995 ? 'scale(' + (.965 + .035 * r).toFixed(4) + ')' : 'none';
+    });
   }
   function resize() {
     measure(); dpr = dprCap;
     canvas.width = Math.round(canvas.clientWidth * dpr); canvas.height = Math.round(canvas.clientHeight * dpr);
     if (prog) gl.viewport(0, 0, canvas.width, canvas.height);
-    layoutShot();
+    layoutAll();
   }
 
   /* ------------------------------------------------------------------ per-frame state */
   const pm = { x: 0, y: 0, tx: 0, ty: 0, cx: -999, cy: -999 };
   addEventListener('pointermove', e => { pm.tx = (e.clientX / innerWidth - .5) * 2; pm.ty = (e.clientY / innerHeight - .5) * 2; pm.cx = e.clientX; pm.cy = e.clientY; stage.classList.add('hover'); wake(); }, { passive: true });
   document.documentElement.addEventListener('pointerleave', () => stage.classList.remove('hover'));
-  const numcols = $('#numcols'), pupil = $('#pupil'), cardEls = $$('.card');
-  // rest position (fraction of the stage from its centre), tilt and entrance direction of each floating card
-  const CARD = [[-.27, -.04, -7, -1.0, .5], [.06, -.21, 5, .6, -1.1], [.3, .11, -5, 1.1, .5], [-.1, .2, 4, -.2, 1.2], [-.4, .23, 8, -1.1, 1.0]];
-  const CARD_M = [[-.2, -.14, -6, -1, .3], [.2, .03, 5, 1, .4], [-.04, .22, -3, 0, 1.2]];
-  const dbg = window.__toring = { s: 0, active: -1, frames: 0, avgMs: 0, gl: !!prog, dpr: 1, K, shot: 0, lay: null, stippled: () => (stipple ? 1 : 0) };
+  const numcols = $('#numcols'), pupil = $('#pupil');
+  const dbg = window.__toring = { s: 0, active: -1, frames: 0, avgMs: 0, gl: !!prog, dpr: 1, K, shot: [], lay: [], stippled: () => (stipple ? stipple.length : 0) };
   let raf = 0, last = 0, time = 0, s = 0, slow = 0, nSlow = 0, frames = 0;
   const wake = () => { if (!raf && !document.hidden) raf = requestAnimationFrame(frame); };
-  function layoutCards(e, t) {
-    const mobile = W < 760, set = mobile ? CARD_M : CARD;
-    cardEls.forEach((el, n) => { const c = n + 1;
-      if (c >= set.length) return;
-      const [rx, ry, rot, fx, fy] = set[c], h = stage.clientHeight;
-      const k = smooth(0, 1, clamp((e * 1.25 - c * .06))), out = 1 - smooth(5.5, 5.95, s), o = k * out;
-      if (o < .005) { el.style.opacity = 0; el.style.visibility = 'hidden'; return; }
-      el.style.visibility = 'visible';
-      const flyX = (1 - k) * fx * W * .6, flyY = (1 - k) * fy * h * .6;
-      const floatX = reduce ? 0 : Math.sin(t * .45 + c * 1.7) * 7, floatY = reduce ? 0 : Math.cos(t * .38 + c * 2.3) * 9;
-      const px = reduce ? 0 : pm.x * (10 + c * 6), py = reduce ? 0 : pm.y * (8 + c * 5);
-      el.style.transform = `translate3d(calc(-50% + ${(rx * W + flyX + floatX + px).toFixed(1)}px), calc(-50% + ${(ry * h + flyY + floatY + py).toFixed(1)}px), ${(c % 2 ? -30 : 40) * k}px) rotateZ(${(rot + (1 - k) * rot * 1.8).toFixed(2)}deg) rotateY(${(pm.x * 5 * (c % 2 ? -1 : 1)).toFixed(2)}deg) rotateX(${(-pm.y * 4).toFixed(2)}deg)`;
-      el.style.opacity = o.toFixed(3);
-      el.style.filter = o < .98 && !reduce ? `blur(${((1 - k) * 8).toFixed(1)}px)` : 'none';
-    });
-  }
   function frame(now) {
     raf = 0;
     const dtRaw = (now - last) / 1000 || .016, dt = Math.min(.05, dtRaw); last = now;
@@ -349,11 +348,11 @@ void main(){ vec2 d = gl_PointCoord - 0.5; float r = dot(d, d) * 4.0; if (r > 1.
     numcols.style.opacity = clamp(1 - Math.abs(s - 3) / .55).toFixed(3);
     // the app's cursor highlight and drifting blobs
     if (!reduce) { stage.style.setProperty('--px', (pm.x * 14).toFixed(1)); stage.style.setProperty('--py', (pm.y * 14).toFixed(1)); stage.style.setProperty('--sx', pm.cx.toFixed(0) + 'px'); stage.style.setProperty('--sy', pm.cy.toFixed(0) + 'px'); }
-    const ce = clamp((s - 4.4) / .6); layoutCards(ce, time); updateShot();
+    updateShots();
     // the live dot sits at the centre of the final ring and leans a little towards the pointer
-    const po = smooth(5.7, 6, s); pupil.style.opacity = po.toFixed(3);
+    const po = smooth(6.7, 7, s); pupil.style.opacity = po.toFixed(3);
     if (po > 0.01) {
-      const asp = canvas.clientWidth / canvas.clientHeight, fit = camMul(asp), z = CAM[6] * fit, ox = OFF[6][0] * offFactor(asp), oy = OFF[6][1] * offFactor(asp);
+      const asp = canvas.clientWidth / canvas.clientHeight, fit = camMul(asp), z = CAM[7] * fit, ox = OFF[7][0] * offFactor(asp), oy = OFF[7][1] * offFactor(asp);
       const nx = (ox * 2 / asp) / z, ny = (oy * 2) / z;
       pupil.style.transform = `translate3d(${((nx * .5 + .5) * canvas.clientWidth + (reduce ? 0 : pm.x * 9)).toFixed(1)}px, ${((1 - (ny * .5 + .5)) * canvas.clientHeight + (reduce ? 0 : pm.y * 9)).toFixed(1)}px, 0)`;
     }
@@ -377,7 +376,7 @@ void main(){ vec2 d = gl_PointCoord - 0.5; float r = dot(d, d) * 4.0; if (r > 1.
     gl.uniform1f(U.uMix, t); gl.uniform1f(U.uTime, time); gl.uniform1f(U.uAspect, asp);
     gl.uniform1f(U.uPx, dpr * canvas.clientHeight / 900 * 2.5 * Math.min(1.25, 1.2 / fit + .1) * Math.sqrt(16000 / C) * (asp < .8 ? 1.55 : 1));
     gl.uniform1f(U.uCamA, CAM[i0] * fit); gl.uniform1f(U.uCamB, CAM[i0 + 1] * fit);
-    gl.uniform1f(U.uImgA, i0 === SHOT ? 1 : 0); gl.uniform1f(U.uImgB, i0 + 1 === SHOT ? 1 : 0); gl.uniform1f(U.uFx, i0 === SHOT - 1 || i0 === SHOT ? 1 : 0);
+    gl.uniform1f(U.uImgA, i0 === SC ? 1 : 0); gl.uniform1f(U.uImgB, i0 + 1 === SC ? 1 : 0);
     gl.uniform2f(U.uOffA, OFF[i0][0] * of, OFF[i0][1] * of); gl.uniform2f(U.uOffB, OFF[i0 + 1][0] * of, OFF[i0 + 1][1] * of);
     gl.uniform2f(U.uRot, reduce ? 0 : -pm.y * .07 + Math.sin(time * .2) * .03, (reduce ? s * .35 : time * .05 + s * .35 + pm.x * .12));
     gl.uniform2f(U.uPan, reduce ? 0 : pm.x * .04, reduce ? 0 : -pm.y * .03);
@@ -393,7 +392,7 @@ void main(){ vec2 d = gl_PointCoord - 0.5; float r = dot(d, d) * 4.0; if (r > 1.
   addEventListener('hashchange', hashScene);
   resize(); readScroll(); s = tgt; hashScene(); readScroll(); s = tgt;
   setActive(0);
-  loadStipple();
-  document.fonts && document.fonts.ready.then(() => { measure(); layoutShot(); wake(); });
+  loadStipples();
+  document.fonts && document.fonts.ready.then(() => { measure(); layoutAll(); wake(); });
   wake();
 })();
