@@ -15,13 +15,13 @@
   let release = null;
   const stat = $('#stat');
   async function loadRelease() {
-    try { const c = JSON.parse(sessionStorage.getItem('toring-release') || 'null'); if (c && Date.now() - c.t < 3600e3) return c.d; } catch { /* storage blocked */ }
+    try { const c = JSON.parse(sessionStorage.getItem('toring-release-v2') || 'null'); if (c && Date.now() - c.t < 300e3) return c.d; } catch { /* storage blocked */ }   // 5 min: a new release shows up quickly; the new key drops any older cached entry
     const r = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { Accept: 'application/vnd.github+json' } });
     if (!r.ok) throw new Error('GitHub answered HTTP ' + r.status);
     const j = await r.json(), a = (j.assets || []).find(x => /\.exe$/i.test(x.name) && !/blockmap/i.test(x.name));
     if (!a) throw new Error('no installer in the latest release');
     const d = { tag: j.tag_name, name: a.name, url: a.browser_download_url, size: a.size, date: j.published_at, page: j.html_url };
-    try { sessionStorage.setItem('toring-release', JSON.stringify({ t: Date.now(), d })); } catch { /* ignore */ }
+    try { sessionStorage.setItem('toring-release-v2', JSON.stringify({ t: Date.now(), d })); } catch { /* ignore */ }
     return d;
   }
   const mb = b => (b / 1048576).toFixed(1) + ' MB';
